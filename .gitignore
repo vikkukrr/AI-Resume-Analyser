@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.local
+*.log
+.DS_Store
+dist/
+uploads/
+backend/node_modules/
+frontend/node_modules/
+ai-resume-platform/backend/node_modules/
+ai-resume-platform/frontend/node_modules/
+ai-resume-platform/dist/
