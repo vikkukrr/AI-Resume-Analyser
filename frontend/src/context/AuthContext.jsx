@@ -6,89 +6,58 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const restoreSession = useCallback(async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    try {
-      const { data } = await api.get('/auth/me');
-      setUser(data.user);
-    } catch {
-      localStorage.removeItem('token');
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
-    restoreSession();
-  }, [restoreSession]);
+    const token = localStorage.getItem('token');
+    if (!token) { setLoading(false); return; }
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    api.get('/auth/me')
+      .then(({ data }) => setUser(data.user))
+      .catch(() => {
+        localStorage.removeItem('token');
+        delete api.defaults.headers.common['Authorization'];
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const login = useCallback(async (email, password) => {
-    setError(null);
-    try {
-      const { data } = await api.post('/auth/login', { email, password });
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
-      return data;
-    } catch (err) {
-      const message = err.response?.data?.message || 'Login failed';
-      setError(message);
-      throw new Error(message);
-    }
+    const { data } = await api.post('/auth/login', { email, password });
+    localStorage.setItem('token', data.token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+    setUser(data.user);
+    return data.user;
   }, []);
 
-  const register = useCallback(async (name, email, password, targetRole) => {
-    setError(null);
-    try {
-      const { data } = await api.post('/auth/register', { name, email, password, targetRole });
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
-      return data;
-    } catch (err) {
-      const message = err.response?.data?.message || 'Registration failed';
-      setError(message);
-      throw new Error(message);
-    }
+  const register = useCallback(async (payload) => {
+    const { data } = await api.post('/auth/register', payload);
+    localStorage.setItem('token', data.token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+    setUser(data.user);
+    return data.user;
   }, []);
 
-  const logout = useCallback(async () => {
-    try {
-      await api.post('/auth/logout');
-    } catch {
-      // ignore
-    } finally {
-      localStorage.removeItem('token');
-      setUser(null);
-      setError(null);
-    }
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    delete api.defaults.headers.common['Authorization'];
+    setUser(null);
   }, []);
 
-  const updateUser = useCallback(async (data) => {
-    setError(null);
-    try {
-      const res = await api.put('/users/profile', data);
-      setUser(res.data.user);
-      return res.data;
-    } catch (err) {
-      const message = err.response?.data?.message || 'Update failed';
-      setError(message);
-      throw new Error(message);
-    }
+  const updateUser = useCallback((updates) => {
+    setUser(prev => ({ ...prev, ...updates }));
   }, []);
 
-  const value = { user, loading, error, login, register, logout, updateUser };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{
+      user, loading, login, register, logout, updateUser,
+      isAdmin: user?.role === 'admin'
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
-export function useAuth() {
+export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
-}
+};

@@ -1,56 +1,44 @@
 const jwt = require('jsonwebtoken');
+const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 
-const generateAccessToken = (user) => {
-  return jwt.sign(
-    { id: user._id, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
-};
+const JWT_SECRET = process.env.JWT_SECRET || 'careerai_fallback_secret_key_2024';
 
-const protect = async (req, res, next) => {
+const protect = asyncHandler(async (req, res, next) => {
   let token;
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
+
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
     token = req.headers.authorization.split(' ')[1];
   }
 
   if (!token) {
     res.status(401);
-    throw new Error('Not authorized, no token provided');
+    throw new Error('Not authorized - no token');
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
-    if (!user) {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = await User.findById(decoded.id).select('-password');
+
+    if (!req.user) {
       res.status(401);
       throw new Error('User not found');
     }
-    if (!user.isActive) {
-      res.status(401);
-      throw new Error('Account has been deactivated');
-    }
-    req.user = user;
+
     next();
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-      res.status(401);
-      throw new Error('Not authorized, token is invalid or expired');
-    }
-    throw error;
+  } catch (err) {
+    console.error('Auth error:', err.message);
+    res.status(401);
+    throw new Error('Not authorized - invalid token');
   }
-};
+});
 
 const adminOnly = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    return next();
-  }
+  if (req.user && req.user.role === 'admin') return next();
   res.status(403);
-  throw new Error('Access denied, admin only');
+  throw new Error('Admin access required');
 };
 
-module.exports = { generateAccessToken, protect, adminOnly };
+const generateAccessToken = (id) => jwt.sign({ id }, JWT_SECRET, { expiresIn: '30d' });
+
+module.exports = { protect, adminOnly, generateAccessToken };

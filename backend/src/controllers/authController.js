@@ -1,81 +1,128 @@
 const asyncHandler = require('express-async-handler');
-const { validationResult } = require('express-validator');
 const User = require('../models/User');
-const { generateAccessToken } = require('../middleware/auth');
-const { sendWelcomeEmail } = require('../services/emailService');
+const jwt = require('jsonwebtoken');
 
-const register = asyncHandler(async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const mapped = errors.array().map((err) => ({
-      field: err.path,
-      message: err.msg,
-    }));
-    return res.status(400).json({ success: false, message: 'Validation failed', errors: mapped });
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET || 'careerai_fallback_secret_key_2024', {
+    expiresIn: '30d'
+  });
+};
+
+exports.register = asyncHandler(async (req, res) => {
+  console.log('REGISTER REQUEST BODY:', req.body);
+
+  const { name, email, password, targetRole } = req.body;
+
+  if (!name || !email || !password) {
+    res.status(400);
+    throw new Error('Name, email and password are required');
   }
 
-  const { name, email, password } = req.body;
+  if (password.length < 6) {
+    res.status(400);
+    throw new Error('Password must be at least 6 characters');
+  }
 
-  const existingUser = await User.findOne({ email: email.toLowerCase() });
+  const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
   if (existingUser) {
     res.status(400);
-    throw new Error('User with this email already exists');
+    throw new Error('An account with this email already exists');
   }
 
-  const user = await User.create({ name, email, password });
-  const token = generateAccessToken(user);
+  const user = await User.create({
+    name: name.trim(),
+    email: email.toLowerCase().trim(),
+    password,
+    targetRole: targetRole || '',
+    isActive: true,
+  });
 
-  try {
-    await sendWelcomeEmail(user);
-  } catch (err) {
-    console.warn('Failed to send welcome email:', err.message);
-  }
+  console.log('USER CREATED:', user._id);
+
+  const token = generateToken(user._id);
 
   res.status(201).json({
     success: true,
+    token,
     user: {
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
+      targetRole: user.targetRole,
       avatar: user.avatar,
-    },
-    token,
+      bio: user.bio,
+      skills: user.skills,
+      resumeCount: user.resumeCount,
+      interviewCount: user.interviewCount,
+      avgInterviewScore: user.avgInterviewScore,
+      bestAtsScore: user.bestAtsScore,
+      createdAt: user.createdAt,
+    }
   });
 });
 
-const login = asyncHandler(async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const mapped = errors.array().map((err) => ({
-      field: err.path,
-      message: err.msg,
-    }));
-    return res.status(400).json({ success: false, message: 'Validation failed', errors: mapped });
-  }
+exports.login = asyncHandler(async (req, res) => {
+  console.log('LOGIN REQUEST BODY:', { email: req.body.email });
 
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+  if (!email || !password) {
+    res.status(400);
+    throw new Error('Email and password are required');
+  }
+
+  const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
+
+  console.log('USER FOUND:', !!user);
+
   if (!user) {
     res.status(401);
-    throw new Error('Invalid email or password');
+    throw new Error('No account found with this email');
   }
 
   const isMatch = await user.matchPassword(password);
+  console.log('PASSWORD MATCH:', isMatch);
+
   if (!isMatch) {
-    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() }, { new: true });
     res.status(401);
-    throw new Error('Invalid email or password');
+    throw new Error('Incorrect password');
   }
 
   user.lastLogin = new Date();
-  user.loginCount += 1;
-  user.isActive = true;
-  await user.save();
+  user.loginCount = (user.loginCount || 0) + 1;
+  user.lastActive = new Date();
+  await user.save({ validateBeforeSave: false });
 
-  const token = generateAccessToken(user);
+  const token = generateToken(user._id);
 
+  res.json({
+    success: true,
+    token,
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      targetRole: user.targetRole,
+      avatar: user.avatar,
+      bio: user.bio,
+      skills: user.skills,
+      resumeCount: user.resumeCount,
+      interviewCount: user.interviewCount,
+      avgInterviewScore: user.avgInterviewScore,
+      bestAtsScore: user.bestAtsScore,
+      createdAt: user.createdAt,
+    }
+  });
+});
+
+exports.getMe = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
   res.json({
     success: true,
     user: {
@@ -83,40 +130,33 @@ const login = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      targetRole: user.targetRole,
       avatar: user.avatar,
-    },
-    token,
+      bio: user.bio,
+      skills: user.skills,
+      linkedIn: user.linkedIn,
+      github: user.github,
+      website: user.website,
+      location: user.location,
+      resumeCount: user.resumeCount,
+      interviewCount: user.interviewCount,
+      avgInterviewScore: user.avgInterviewScore,
+      bestAtsScore: user.bestAtsScore,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+    }
   });
 });
 
-const getMe = asyncHandler(async (req, res) => {
-  res.json({ success: true, user: req.user });
+exports.logout = asyncHandler(async (req, res) => {
+  res.json({ success: true, message: 'Logged out' });
 });
 
-const logout = asyncHandler(async (req, res) => {
-  res.json({ success: true, message: 'Logged out successfully' });
-});
-
-const changePassword = asyncHandler(async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const mapped = errors.array().map((err) => ({
-      field: err.path,
-      message: err.msg,
-    }));
-    return res.status(400).json({ success: false, message: 'Validation failed', errors: mapped });
-  }
-
+exports.changePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
-
   const user = await User.findById(req.user._id).select('+password');
-  if (!user) {
-    res.status(404);
-    throw new Error('User not found');
-  }
 
-  const isMatch = await user.matchPassword(currentPassword);
-  if (!isMatch) {
+  if (!(await user.matchPassword(currentPassword))) {
     res.status(400);
     throw new Error('Current password is incorrect');
   }
@@ -124,7 +164,6 @@ const changePassword = asyncHandler(async (req, res) => {
   user.password = newPassword;
   await user.save();
 
-  res.json({ success: true, message: 'Password changed successfully' });
+  const token = generateToken(user._id);
+  res.json({ success: true, token, message: 'Password changed successfully' });
 });
-
-module.exports = { register, login, getMe, logout, changePassword };

@@ -18,7 +18,6 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters'],
       select: false,
     },
     role: {
@@ -42,7 +41,7 @@ const userSchema = new mongoose.Schema(
     totalInterviewScore: { type: Number, default: 0 },
     streak: { type: Number, default: 0 },
     lastActive: { type: Date },
-    isEmailVerified: { type: Boolean, default: false },
+    isEmailVerified: { type: Boolean, default: true },
     lastLogin: { type: Date },
     isActive: { type: Boolean, default: true },
     loginCount: { type: Number, default: 0 },
