@@ -32,7 +32,7 @@ const steps = [
 ];
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, startDemo } = useAuth();
   const navigate = useNavigate();
   const featuresRef = useRef(null);
   const [stats, setStats] = useState(null);
@@ -92,7 +92,13 @@ export default function HomePage() {
                   Get Started Free
                   <ArrowRight size={18} />
                 </button>
-                <button onClick={scrollToFeatures} className="btn-secondary btn-lg text-base px-8">
+                <button
+                  onClick={() => { startDemo(); navigate('/dashboard'); }}
+                  className="btn-secondary btn-lg text-base px-8"
+                >
+                  Try Free Demo
+                </button>
+                <button onClick={scrollToFeatures} className="btn-ghost btn-lg text-base px-8">
                   Learn More
                 </button>
               </div>

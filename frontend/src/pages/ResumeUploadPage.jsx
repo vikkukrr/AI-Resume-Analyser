@@ -8,10 +8,14 @@ import { formatDate, scoreColor } from '../utils/helpers';
 import { SkeletonCard } from '../components/common/SkeletonCard';
 import PageHeader from '../components/common/PageHeader';
 import EmptyState from '../components/common/EmptyState';
+import DemoModal from '../components/common/DemoModal';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function ResumeUploadPage() {
   const navigate = useNavigate();
+  const { isDemo } = useAuth();
+  const [showDemoModal, setShowDemoModal] = useState(false);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -20,6 +24,13 @@ export default function ResumeUploadPage() {
   const [loadingPast, setLoadingPast] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  useEffect(() => {
+    if (isDemo) {
+      setShowDemoModal(true);
+      setLoadingPast(false);
+    }
+  }, [isDemo]);
 
   const onDrop = useCallback((acceptedFiles) => {
     const f = acceptedFiles[0];
@@ -234,6 +245,7 @@ export default function ResumeUploadPage() {
           </>
         )}
       </div>
+      <DemoModal open={showDemoModal} onClose={() => setShowDemoModal(false)} feature="Resume Upload" />
     </div>
   );
 }

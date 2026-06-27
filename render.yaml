@@ -1,4 +1,5 @@
 services:
+  # ─── Backend API ──────────────────────────────────────────────────
   - type: web
     name: careerai-backend
     env: node
@@ -10,21 +11,33 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 5000
+      # ⚠️ YOU MUST SET THESE IN RENDER DASHBOARD → Environment tab:
+      # MONGODB_URI = your MongoDB Atlas connection string
+      # GEMINI_API_KEY = your free key from aistudio.google.com/apikey
       - key: MONGODB_URI
         sync: false
-      - key: JWT_SECRET
-        generateValue: true
-      - key: JWT_EXPIRES_IN
-        value: 7d
       - key: GEMINI_API_KEY
         sync: false
+      - key: JWT_SECRET
+        value: careerai_super_secret_jwt_key_2024_production_xyz_abc_123
+      - key: JWT_EXPIRES_IN
+        value: 30d
       - key: FRONTEND_URL
-        sync: false
+        value: https://careerai-frontend.onrender.com
       - key: UPLOAD_MAX_SIZE_MB
         value: 10
       - key: UPLOAD_DIR
         value: uploads
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_SECURE
+        value: false
 
+  # ─── Frontend Static Site ──────────────────────────────────────────
   - type: web
     name: careerai-frontend
     env: static
@@ -33,8 +46,10 @@ services:
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/dist
     envVars:
+      # This tells the frontend where the backend API is
+      # Change the URL to match your actual backend service URL
       - key: VITE_API_URL
-        sync: false
+        value: https://ai-resume-analyser-ernt.onrender.com/api
     redirects:
       - source: /*
         destination: /index.html

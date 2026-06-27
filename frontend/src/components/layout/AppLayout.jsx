@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getInitials } from '../../utils/helpers';
+import DemoBanner from '../common/DemoBanner';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -138,7 +139,8 @@ export default function AppLayout() {
 
       {/* Main content */}
       <main className="lg:pl-64">
-        <div className="pt-14 lg:pt-0">
+        <DemoBanner />
+        <div className={user?.isDemo ? 'pt-0 lg:pt-0' : 'pt-14 lg:pt-0'}>
           <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
             <Outlet />
           </div>

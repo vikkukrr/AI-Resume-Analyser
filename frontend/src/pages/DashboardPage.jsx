@@ -4,12 +4,38 @@ import { motion } from 'framer-motion';
 import { Upload, FileText, Mic, Trophy, ArrowRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import { scoreColor, formatDate, getScoreColor } from '../utils/helpers';
 import { SkeletonStat } from '../components/common/SkeletonCard';
 import EmptyState from '../components/common/EmptyState';
 import PageHeader from '../components/common/PageHeader';
 import toast from 'react-hot-toast';
+
+const DEMO_STATS = {
+  totalResumes: 8,
+  avgAtsScore: 74,
+  interviewsDone: 5,
+  bestInterviewScore: 82,
+  atsHistory: [
+    { date: 'Jan', score: 55 }, { date: 'Feb', score: 62 }, { date: 'Mar', score: 68 },
+    { date: 'Apr', score: 71 }, { date: 'May', score: 74 }, { date: 'Jun', score: 78 },
+  ],
+  interviewHistory: [
+    { date: 'Jan', score: 60 }, { date: 'Feb', score: 65 }, { date: 'Mar', score: 68 },
+    { date: 'Apr', score: 72 }, { date: 'May', score: 78 }, { date: 'Jun', score: 82 },
+  ],
+  recentResumes: [
+    { _id: 'demo-r1', filename: 'Frontend_Engineer_Resume.pdf', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), atsScore: 82 },
+    { _id: 'demo-r2', filename: 'Software_Engineer_Resume.pdf', createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), atsScore: 74 },
+    { _id: 'demo-r3', filename: 'Junior_Dev_Resume.pdf', createdAt: new Date(Date.now() - 86400000 * 25).toISOString(), atsScore: 65 },
+  ],
+  recentInterviews: [
+    { _id: 'demo-i1', targetRole: 'Senior Software Engineer', createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), totalScore: 82 },
+    { _id: 'demo-i2', targetRole: 'Full Stack Developer', createdAt: new Date(Date.now() - 86400000 * 12).toISOString(), totalScore: 78 },
+    { _id: 'demo-i3', targetRole: 'Frontend Engineer', createdAt: new Date(Date.now() - 86400000 * 20).toISOString(), totalScore: 71 },
+  ],
+};
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -34,11 +60,17 @@ const statCards = [
 
 export default function DashboardPage() {
   const { isDark } = useTheme();
+  const { isDemo } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (isDemo) {
+      setStats({ ...DEMO_STATS });
+      setLoading(false);
+      return;
+    }
     const fetchStats = async () => {
       try {
         const { data } = await api.get('/dashboard/stats');
@@ -51,7 +83,7 @@ export default function DashboardPage() {
       }
     };
     fetchStats();
-  }, []);
+  }, [isDemo]);
 
   if (loading) {
     return (

@@ -1,8 +1,12 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV
+    ? '/api'
+    : 'https://ai-resume-analyser-ernt.onrender.com/api');
 
-console.log('API Base URL:', BASE_URL);
+console.log('🔗 API Base URL:', BASE_URL);
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -14,19 +18,23 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
-  console.log('API REQUEST:', config.method?.toUpperCase(), config.url);
+  console.log('→ API REQUEST:', config.method?.toUpperCase(), config.url);
   return config;
 });
 
 api.interceptors.response.use(
   (res) => {
-    console.log('API RESPONSE:', res.status, res.config.url);
+    console.log('← API RESPONSE:', res.status, res.config.url);
     return res;
   },
   (err) => {
-    console.error('API ERROR:', err.response?.status, err.config?.url, err.response?.data);
-    if (err.response?.status === 401) {
-      const isAuthRoute = err.config?.url?.includes('/auth/');
+    const status = err.response?.status;
+    const url = err.config?.url;
+    const data = err.response?.data;
+    console.error('✗ API ERROR:', status, url, data);
+
+    if (status === 401) {
+      const isAuthRoute = url?.includes('/auth/');
       if (!isAuthRoute) {
         localStorage.removeItem('token');
         delete api.defaults.headers.common['Authorization'];

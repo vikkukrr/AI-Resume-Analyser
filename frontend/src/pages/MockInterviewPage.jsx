@@ -5,6 +5,8 @@ import { Mic, Play, FileText } from 'lucide-react';
 import api from '../utils/api';
 import PageHeader from '../components/common/PageHeader';
 import { SkeletonCard } from '../components/common/SkeletonCard';
+import DemoModal from '../components/common/DemoModal';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const difficulties = [
@@ -15,12 +17,21 @@ const difficulties = [
 
 export default function MockInterviewPage() {
   const navigate = useNavigate();
+  const { isDemo } = useAuth();
+  const [showDemoModal, setShowDemoModal] = useState(false);
   const [targetRole, setTargetRole] = useState('');
   const [difficulty, setDifficulty] = useState('intermediate');
   const [resumes, setResumes] = useState([]);
   const [selectedResume, setSelectedResume] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingResumes, setLoadingResumes] = useState(true);
+
+  useEffect(() => {
+    if (isDemo) {
+      setShowDemoModal(true);
+      setLoadingResumes(false);
+    }
+  }, [isDemo]);
 
   useEffect(() => {
     const fetchResumes = async () => {
@@ -136,6 +147,7 @@ export default function MockInterviewPage() {
           </button>
         </div>
       </div>
+      <DemoModal open={showDemoModal} onClose={() => setShowDemoModal(false)} feature="Mock Interview" />
     </div>
   );
 }

@@ -22,18 +22,20 @@ function LoadingScreen() {
 function ProtectedRoute({ children, adminOnly }) {
   const { user, loading } = useAuth();
   const token = localStorage.getItem('token');
+  const isDemo = localStorage.getItem('demo_mode') === 'true';
   if (loading) return <LoadingScreen />;
   if (!user && token) return <LoadingScreen />;
-  if (!user && !token) return <Navigate to="/login" />;
-  if (adminOnly && user.role !== 'admin') return <Navigate to="/dashboard" />;
+  if (!user && !token && !isDemo) return <Navigate to="/login" />;
+  if (adminOnly && user?.role !== 'admin') return <Navigate to="/dashboard" />;
   return children;
 }
 
 function GuestRoute({ children }) {
   const { user, loading } = useAuth();
   const token = localStorage.getItem('token');
+  const isDemo = localStorage.getItem('demo_mode') === 'true';
   if (loading) return <LoadingScreen />;
-  if (user) return <Navigate to="/dashboard" />;
+  if (user && !isDemo) return <Navigate to="/dashboard" />;
   if (!user && token) return <LoadingScreen />;
   return children;
 }

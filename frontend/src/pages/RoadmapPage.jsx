@@ -5,15 +5,24 @@ import api from '../utils/api';
 import { SkeletonCard } from '../components/common/SkeletonCard';
 import PageHeader from '../components/common/PageHeader';
 import EmptyState from '../components/common/EmptyState';
+import DemoModal from '../components/common/DemoModal';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function RoadmapPage() {
+  const { isDemo } = useAuth();
+  const [showDemoModal, setShowDemoModal] = useState(false);
   const [roadmap, setRoadmap] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [expandedPhase, setExpandedPhase] = useState(null);
 
   useEffect(() => {
+    if (isDemo) {
+      setShowDemoModal(true);
+      setLoading(false);
+      return;
+    }
     const fetchRoadmap = async () => {
       try {
         const { data } = await api.get('/dashboard/roadmap');
@@ -25,7 +34,7 @@ export default function RoadmapPage() {
       }
     };
     fetchRoadmap();
-  }, []);
+  }, [isDemo]);
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -260,6 +269,7 @@ export default function RoadmapPage() {
           </div>
         </div>
       )}
+      <DemoModal open={showDemoModal} onClose={() => setShowDemoModal(false)} feature="Roadmap Generation" />
     </div>
   );
 }
