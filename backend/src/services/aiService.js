@@ -1,28 +1,35 @@
-const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' +
-  process.env.GEMINI_API_KEY;
+const API_KEY = process.env.OPENROUTER_API_KEY || process.env.GEMINI_API_KEY;
+const MODEL = 'google/gemini-2.5-flash-001';
+
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 async function callGemini(prompt, systemInstruction, maxOutputTokens) {
   const fetch = (await import('node-fetch')).default;
-  const res = await fetch(GEMINI_URL, {
+  const res = await fetch(OPENROUTER_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${API_KEY}`,
+      'HTTP-Referer': 'https://careerai.app',
+      'X-Title': 'CareerAI',
+    },
     body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemInstruction }] },
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        maxOutputTokens,
-        temperature: 0.4,
-        responseMimeType: 'application/json',
-      },
+      model: MODEL,
+      messages: [
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: prompt },
+      ],
+      max_tokens: maxOutputTokens,
+      temperature: 0.4,
+      response_format: { type: 'json_object' },
     }),
   });
   if (!res.ok) {
     const errBody = await res.text();
-    throw new Error(`Gemini API error ${res.status}: ${errBody}`);
+    throw new Error(`OpenRouter API error ${res.status}: ${errBody}`);
   }
   const data = await res.json();
-  const raw = data.candidates[0].content.parts[0].text;
+  const raw = data.choices[0].message.content;
   const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
   return JSON.parse(cleaned);
 }

@@ -20,6 +20,9 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      # OpenRouter key (takes priority over GEMINI_API_KEY)
+      - key: OPENROUTER_API_KEY
+        sync: false
       - key: JWT_SECRET
         value: careerai_super_secret_jwt_key_2024_production_xyz_abc_123
       - key: JWT_EXPIRES_IN
