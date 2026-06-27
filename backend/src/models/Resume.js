@@ -8,8 +8,8 @@ const resumeSchema = new mongoose.Schema(
       required: true,
     },
     originalName: { type: String },
-    filename: { type: String },
-    filePath: { type: String },
+    filename: { type: String, default: '' },
+    filePath: { type: String, default: '' },
     fileType: {
       type: String,
       enum: ['pdf', 'docx'],

@@ -23,4 +23,15 @@ const extractText = async (filePath, fileType) => {
   throw new Error(`Unsupported file type: ${fileType}`);
 };
 
-module.exports = { extractPDF, extractDOCX, extractText };
+const extractTextFromBuffer = async (buffer, fileType) => {
+  if (fileType === 'pdf') {
+    const data = await pdfParse(buffer);
+    return data.text;
+  } else if (fileType === 'docx') {
+    const result = await mammoth.extractRawText({ buffer });
+    return result.value;
+  }
+  throw new Error(`Unsupported file type: ${fileType}`);
+};
+
+module.exports = { extractPDF, extractDOCX, extractText, extractTextFromBuffer };

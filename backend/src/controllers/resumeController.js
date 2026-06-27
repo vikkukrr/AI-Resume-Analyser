@@ -1,9 +1,8 @@
 const asyncHandler = require('express-async-handler');
-const fs = require('fs');
 const path = require('path');
 const Resume = require('../models/Resume');
 const User = require('../models/User');
-const { extractText } = require('../utils/textExtractor');
+const { extractTextFromBuffer } = require('../utils/textExtractor');
 const aiService = require('../services/aiService');
 const { sendResumeAnalyzedEmail } = require('../services/emailService');
 
@@ -19,8 +18,6 @@ const uploadResume = asyncHandler(async (req, res) => {
   const resume = await Resume.create({
     user: req.user._id,
     originalName: req.file.originalname,
-    filename: req.file.filename,
-    filePath: req.file.path,
     fileType,
     fileSizeKB: Math.round(req.file.size / 1024),
     status: 'uploaded',
@@ -32,15 +29,15 @@ const uploadResume = asyncHandler(async (req, res) => {
     resumeId: resume._id,
   });
 
-  processAnalysis(req, resume, fileType);
+  processResumeFromBuffer(req.file.buffer, fileType, resume, req);
 });
 
-const processAnalysis = async (req, resume, fileType) => {
+const processResumeFromBuffer = async (buffer, fileType, resume, req) => {
   try {
     resume.status = 'processing';
     await resume.save();
 
-    const extractedText = await extractText(resume.filePath, fileType);
+    const extractedText = await extractTextFromBuffer(buffer, fileType);
 
     resume.extractedText = extractedText;
     await resume.save();
@@ -141,10 +138,6 @@ const deleteResume = asyncHandler(async (req, res) => {
   if (resume.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
     res.status(403);
     throw new Error('Not authorized to delete this resume');
-  }
-
-  if (resume.filePath && fs.existsSync(resume.filePath)) {
-    fs.unlinkSync(resume.filePath);
   }
 
   await resume.deleteOne();
